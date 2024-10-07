@@ -191,7 +191,6 @@ void processGateOutput()
 
 		if (!inpNotFound)
 		{
-			cout << gateNames[g->gType] << endl;
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 		}
@@ -204,7 +203,6 @@ void processGateOutput()
 
 	allOutputsAvailable = !(unresolvedGates.size());
 
-	//cout << unresolvedGates.size() << endl;
 }
 
 int main(int argc, char* argv[])
@@ -308,9 +306,6 @@ int main(int argc, char* argv[])
 
 			gateList.back()->node_inputs.pop_back();
 
-			//nodeList.back()->gate_input_to.pop_back();
-			//nodeList.back()->gate_output_of.push_back((void *)gateList.back());
-
 			readingGate = false;
 		}
 
@@ -319,7 +314,6 @@ int main(int argc, char* argv[])
 	}
 
 	/* Parse input vector and assign values to nodes */
-	cout << "strlen " << strlen(argv[2]) << endl;
 	for (int i = 0; i < strlen(argv[2]); i++)
 	{
 		/* Loop over the bits, find the node, and assign the value */
@@ -327,28 +321,9 @@ int main(int argc, char* argv[])
 		{
 			if (x->ID == inpNodesList[i])
 			{
-				cout << "Found input " << x->ID << endl;
 				x->value = argv[2][i]-'0';
 			}
 		}
-	}
-
-	for (auto g : gateList)
-	{
-		cout << gateNames[g->gType] << endl;
-		cout << "Inputs" << endl;
-		for (auto n : g->node_inputs)
-		{
-			cout << n->ID << endl;
-		}
-
-		cout << "Outputs" << endl;
-		for (auto n : g->node_outputs)
-		{
-			cout << n->ID << endl;
-		}
-
-		cout << endl;
 	}
 
 	/* Simulate and print output */
@@ -356,9 +331,6 @@ int main(int argc, char* argv[])
 	{
 		processGateOutput();
 	}
-
-	cout << "Number of inputs: " << inpNodesList.size() << endl;
-	cout << "Number of outputs: " << outNodesList.size() << endl;
 
 	for (auto n : outNodesList)
 	{
