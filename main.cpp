@@ -4,6 +4,9 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cstring>
+#include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -44,6 +47,7 @@ struct Gate
 	vector<struct Node*> node_inputs;
 	vector<struct Node*> node_outputs;
 	enum GateType gType;
+	bool resolved = false;
 };
 
 vector<Node*> nodeList;
@@ -52,9 +56,154 @@ vector<Gate*> gateList;
 vector<int> inpNodesList;
 vector<int> outNodesList;
 
-void processGateOutput(struct Gate *gate)
-{
+vector<Gate*> unresolvedGates;
 
+bool allOutputsAvailable = false;
+
+map<int, Node*> nodeIDMapping;
+
+bool doRemove(Gate* argGate)
+{
+	return argGate->resolved;
+}
+
+void processGateOutput()
+{
+	for (auto& g : unresolvedGates)
+	{
+		int output = 0;
+		bool inpNotFound = false;
+
+		switch (g->gType)
+		{
+		case AND:
+			
+			output = 1;
+			
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output &= g->node_inputs[i]->value;
+			}
+			
+			
+				
+			break;
+
+		case OR:
+			output = 0;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output |= g->node_inputs[i]->value;
+			}
+
+			break;
+
+		case NAND:
+			output = 0;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output |= !(g->node_inputs[i]->value);
+			}
+			
+			break;
+
+		case NOR:
+			output = 1;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output &= !g->node_inputs[i]->value;
+			}
+
+			break;
+
+		case INV:
+			if (g->node_inputs[0]->value == -1)
+			{
+				inpNotFound = true;
+				break;
+			}
+
+			output = !g->node_inputs[0]->value;
+			break;
+
+		case BUF:
+			if (g->node_inputs[0]->value == -1)
+			{
+				inpNotFound = true;
+				break;
+			}
+
+			output = g->node_inputs[0]->value;
+			break;
+
+		case XOR:
+			output = 0;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output ^= g->node_inputs[i]->value;
+			}
+			break;
+
+		case XNOR:
+			output = 1;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->value == -1)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				output ^= g->node_inputs[i]->value;
+			}
+			break;
+		}
+
+		if (!inpNotFound)
+		{
+			g->node_outputs[0]->value = output;
+			g->resolved = true; //can be removed
+		}
+	}
+
+	
+
+	auto final = remove_if(unresolvedGates.begin(), unresolvedGates.end(), doRemove);
+	unresolvedGates.erase(final, unresolvedGates.end());
+
+	allOutputsAvailable = !(unresolvedGates.size());
+
+	//cout << unresolvedGates.size() << endl;
 }
 
 int main(int argc, char* argv[])
@@ -98,19 +247,27 @@ int main(int argc, char* argv[])
 				}
 
 				gateList.push_back(newGate);
+				unresolvedGates.push_back(newGate);
 			}
 			else if (readingGate)
 			{
-				/* We're reading a node. */
-				struct Node* newNode = new struct Node;
-
 				int ID = stoi(token);
-				newNode->ID = ID;
-
+				struct Node* newNode = new struct Node;
+				if (nodeIDMapping.find(ID) != nodeIDMapping.end())
+				{
+					free(newNode);
+					newNode = nodeIDMapping[ID];
+					
+				}
+				else
+				{
+					nodeList.push_back(newNode);
+					newNode->ID = ID;
+					nodeIDMapping[ID] = newNode;
+				}
+				
 				/* Read into input nodes list until we reach end of line. After loop ends, move last entry to output list */
-				gateList.back()->node_inputs.push_back(newNode);
-
-				nodeList.push_back(newNode);
+				gateList.back()->node_inputs.push_back(newNode);	
 
 			}
 			else
@@ -161,8 +318,26 @@ int main(int argc, char* argv[])
 	}
 
 	/* Parse input vector and assign values to nodes */
+	cout << "strlen " << strlen(argv[2]) << endl;
+	for (int i = 0; i < strlen(argv[2]); i++)
+	{
+		/* Loop over the bits, find the node, and assign the value */
+		for (auto& x : nodeList)
+		{
+			if (x->ID == inpNodesList[i])
+			{
+				cout << i << endl;
+				cout << "Found input " << x->ID << endl;
+				x->value = argv[2][i]-'0';
+			}
+		}
+	}
 
 	/* Simulate and print output */
+	while (!allOutputsAvailable)
+	{
+		processGateOutput();
+	}
 
 	cout << "Number of inputs: " << inpNodesList.size() << endl;
 	cout << "Number of outputs: " << outNodesList.size() << endl;
