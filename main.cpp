@@ -191,6 +191,7 @@ void processGateOutput()
 
 		if (!inpNotFound)
 		{
+			cout << gateNames[g->gType] << endl;
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 		}
@@ -255,7 +256,7 @@ int main(int argc, char* argv[])
 				struct Node* newNode = new struct Node;
 				if (nodeIDMapping.find(ID) != nodeIDMapping.end())
 				{
-					free(newNode);
+					delete newNode;
 					newNode = nodeIDMapping[ID];
 					
 				}
@@ -303,7 +304,7 @@ int main(int argc, char* argv[])
 		{
 			/* Move last node to last gate's output list */
 
-			gateList.back()->node_outputs.push_back(nodeList.back());
+			gateList.back()->node_outputs.push_back(gateList.back()->node_inputs.back());
 
 			gateList.back()->node_inputs.pop_back();
 
@@ -326,11 +327,28 @@ int main(int argc, char* argv[])
 		{
 			if (x->ID == inpNodesList[i])
 			{
-				cout << i << endl;
 				cout << "Found input " << x->ID << endl;
 				x->value = argv[2][i]-'0';
 			}
 		}
+	}
+
+	for (auto g : gateList)
+	{
+		cout << gateNames[g->gType] << endl;
+		cout << "Inputs" << endl;
+		for (auto n : g->node_inputs)
+		{
+			cout << n->ID << endl;
+		}
+
+		cout << "Outputs" << endl;
+		for (auto n : g->node_outputs)
+		{
+			cout << n->ID << endl;
+		}
+
+		cout << endl;
 	}
 
 	/* Simulate and print output */
@@ -341,6 +359,11 @@ int main(int argc, char* argv[])
 
 	cout << "Number of inputs: " << inpNodesList.size() << endl;
 	cout << "Number of outputs: " << outNodesList.size() << endl;
+
+	for (auto n : outNodesList)
+	{
+		cout << nodeIDMapping[n]->value;
+	}
 
 	return 0;
 }
