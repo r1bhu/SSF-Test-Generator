@@ -269,6 +269,8 @@ int main(int argc, char* argv[])
 				/* Read into input nodes list until we reach end of line. After loop ends, move last entry to output list */
 				gateList.back()->node_inputs.push_back(newNode);	
 
+				nodeList.back()->gate_input_to.push_back((void *)gateList.back());
+
 			}
 			else
 			{
@@ -307,7 +309,7 @@ int main(int argc, char* argv[])
 
 			gateList.back()->node_inputs.pop_back();
 
-			//nodeList.back()->gate_input_to.pop_back();
+			nodeList.back()->gate_input_to.pop_back();
 			//nodeList.back()->gate_output_of.push_back((void *)gateList.back());
 
 			readingGate = false;
@@ -337,6 +339,8 @@ int main(int argc, char* argv[])
 	{
 		processGateOutput();
 	}
+
+	/* Call the fault simulator func */
 
 	//cout << "Number of inputs: " << inpNodesList.size() << endl;
 	//cout << "Number of outputs: " << outNodesList.size() << endl;
