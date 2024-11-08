@@ -272,14 +272,35 @@ void processGateOutput()
 				if (output == 1)
 				{
 					set<int> removeList;
+					set<int> intersectSet;
+					bool encounteredLowInp = false;
 					/* All faults causing values to non-controlling values */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 
 						if (g->node_inputs[i]->value == 0)
 						{
-							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+							if (!encounteredLowInp)
+							{
+								//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
+								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+
+								encounteredLowInp = true;
+							}
+							else
+							{
+								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
+									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
+
+								/* Clear tempFault list and transfer to tempFaultList */
+								tempFaultList.clear();
+
+								tempFaultList = intersectSet;
+
+								/* Clear intersect */
+								intersectSet.clear();
+							}
+							
 						}
 						else if (g->node_inputs[i]->value == 1)
 						{
@@ -329,14 +350,34 @@ void processGateOutput()
 				if (output == 0)
 				{
 					set<int> removeList;
+					set<int> intersectSet;
+					bool encounteredHighInp = false;
 					/* All faults causing values to non-controlling values */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 
 						if (g->node_inputs[i]->value == 1)
 						{
-							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+							if (!encounteredHighInp)
+							{
+								//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
+								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+								encounteredHighInp = true;
+							}
+							else
+							{
+								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
+									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
+
+								/* Clear tempFault list and transfer to tempFaultList */
+								tempFaultList.clear();
+
+								tempFaultList = intersectSet;
+
+								/* Clear intersect */
+								intersectSet.clear();
+							}
+							
 						}
 						else if (g->node_inputs[i]->value == 0)
 						{
