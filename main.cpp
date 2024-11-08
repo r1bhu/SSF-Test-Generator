@@ -106,8 +106,6 @@ void processGateOutput()
 
 			}
 
-			printf("Printed something for the AND case\n");
-
 			if (!inpNotFound)
 			{
 				
@@ -118,7 +116,6 @@ void processGateOutput()
 					/* All faults causing values to non-controlling values */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
-						printf("Input %d : %d\n", i, g->node_inputs[i]->value);
 						if (g->node_inputs[i]->value == 0)
 						{
 							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
@@ -174,14 +171,36 @@ void processGateOutput()
 				if (output == 1)
 				{
 					set<int> removeList;
-					/* All faults causing values to non-controlling values */
+					set<int> intersectSet;
+					bool encounteredHighInp = false;
+					/* All faults causing values to non-controlling values. Need to find the intersection of faults that flip to 0. */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 
 						if (g->node_inputs[i]->value == 1)
 						{
 							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+							/* If there are no faults, stop right there. If there are any add them to the list */
+							if (!encounteredHighInp)
+							{
+								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
+
+								encounteredHighInp = true;
+							}
+							else
+							{
+								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
+									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
+
+								/* Clear tempFault list and transfer to tempFaultList */
+								tempFaultList.clear();
+
+								tempFaultList = intersectSet;
+
+								/* Clear intersect */
+								intersectSet.clear();
+							}
+							
 
 						}
 						else if (g->node_inputs[i]->value == 0)
@@ -499,7 +518,6 @@ int main(int argc, char* argv[])
 
 					string idFault2 = to_string(ID) + " 1";
 
-					//cout << " Fault " << idFault1 << " - " << idFault2 << endl;
 
 					set<int> temp;
 
@@ -579,8 +597,6 @@ int main(int argc, char* argv[])
 				/* Add faults */
 				x->analysed = 1;
 				string temp = to_string(x->ID) + " " + to_string(1 - x->value);
-
-				cout << "Fault: " << temp << endl;
 
 				auto it = find(allFaults.begin(), allFaults.end(), temp);
 
