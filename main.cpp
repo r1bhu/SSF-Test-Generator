@@ -476,7 +476,7 @@ void processGateOutput()
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 
-			string temp = to_string(g->node_outputs[0]->ID) + " " + to_string(1 - output);
+			string temp = to_string(g->node_outputs[0]->ID) + " stuck at " + to_string(1 - output);
 			auto it = find(allFaults.begin(), allFaults.end(), temp);
 
 			auto index = distance(allFaults.begin(), it);
@@ -575,9 +575,9 @@ int main(int argc, char* argv[])
 				}
 				else
 				{
-					string idFault1 = to_string(ID) + " 0";
+					string idFault1 = to_string(ID) + " stuck at 0";
 
-					string idFault2 = to_string(ID) + " 1";
+					string idFault2 = to_string(ID) + " stuck at 1";
 
 
 					set<int> temp;
@@ -657,7 +657,7 @@ int main(int argc, char* argv[])
 
 				/* Add faults */
 				x->analysed = 1;
-				string temp = to_string(x->ID) + " " + to_string(1 - x->value);
+				string temp = to_string(x->ID) + " stuck at " + to_string(1 - x->value);
 
 				auto it = find(allFaults.begin(), allFaults.end(), temp);
 
@@ -702,12 +702,22 @@ int main(int argc, char* argv[])
 
 	file.flush();
 
+	//set<string> faultStrings;
+
+	//for (int faultIdx : finalFaultList)
+	//{
+	//	//cout << endl << faultIdx << " maps to " << allFaults[faultIdx];
+	//	//std::cout << allFaults[faultIdx] << std::endl;
+	//	faultStrings.insert(allFaults[faultIdx]);
+	//}
+
 	if (file.is_open())
 	{
 		for (int faultIdx : finalFaultList)
 		{
 			//cout << endl << faultIdx << " maps to " << allFaults[faultIdx];
 			//std::cout << allFaults[faultIdx] << std::endl;
+			//file << faultStr << endl;
 			file << allFaults[faultIdx] << endl;
 		}
 
