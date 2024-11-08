@@ -106,6 +106,8 @@ void processGateOutput()
 
 			}
 
+			printf("Printed something for the AND case\n");
+
 			if (!inpNotFound)
 			{
 				
@@ -116,19 +118,14 @@ void processGateOutput()
 					/* All faults causing values to non-controlling values */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
-						
+						printf("Input %d : %d\n", i, g->node_inputs[i]->value);
 						if (g->node_inputs[i]->value == 0)
 						{
 							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-							/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
+
 						}
 						else
 						{
-							//tempFaultList.erase(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID);
-							//tempFaultList.erase(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-							/*std::set_difference(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
 
 							for (int x : idFaultMapping[g->node_inputs[i]->ID])
 							{
@@ -150,13 +147,10 @@ void processGateOutput()
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-						/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-							std::inserter(tempFaultList, tempFaultList.begin()));*/
 
 					}
 				}
 
-				
 			}
 			
 			break;
@@ -188,13 +182,11 @@ void processGateOutput()
 						{
 							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
 							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-							/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
+
 						}
 						else if (g->node_inputs[i]->value == 0)
 						{
-							/*std::set_difference(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
+
 							for (int x : idFaultMapping[g->node_inputs[i]->ID])
 							{
 								removeList.insert(x);
@@ -214,8 +206,6 @@ void processGateOutput()
 					/* All faults causing values to controlling values */
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
-						/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-							std::inserter(tempFaultList, tempFaultList.begin()));*/
 						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
 
 					}
@@ -251,13 +241,9 @@ void processGateOutput()
 						{
 							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
 							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-							/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
 						}
 						else if (g->node_inputs[i]->value == 1)
 						{
-							/*std::set_difference(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
 							for (int x : idFaultMapping[g->node_inputs[i]->ID])
 							{
 								removeList.insert(x);
@@ -278,8 +264,6 @@ void processGateOutput()
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-						/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-							std::inserter(tempFaultList, tempFaultList.begin()));*/
 
 					}
 				}
@@ -314,13 +298,10 @@ void processGateOutput()
 						{
 							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
 							tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-							/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
 						}
 						else if (g->node_inputs[i]->value == 0)
 						{
-							/*std::set_difference(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-								std::inserter(tempFaultList, tempFaultList.begin()));*/
+
 							for (int x : idFaultMapping[g->node_inputs[i]->ID])
 							{
 								removeList.insert(x);
@@ -341,8 +322,6 @@ void processGateOutput()
 					for (int i = 0; i < g->node_inputs.size(); i++)
 					{
 						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-						/*std::set_union(tempFaultList.begin(), tempFaultList.end(), idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-							std::inserter(tempFaultList, tempFaultList.begin()));*/
 
 					}
 				}
@@ -437,7 +416,6 @@ void processGateOutput()
 
 	allOutputsAvailable = !(unresolvedGates.size());
 
-	//cout << unresolvedGates.size() << endl;
 }
 
 void analyzeGateFaults()
@@ -531,7 +509,7 @@ int main(int argc, char* argv[])
 					temp.insert(allFaults.size());
 					allFaults.push_back(idFault2);
 
-					idFaultMapping[ID] = temp;
+					//idFaultMapping[ID] = temp;
 				}
 
 				
@@ -600,7 +578,9 @@ int main(int argc, char* argv[])
 
 				/* Add faults */
 				x->analysed = 1;
-				string temp = x->ID + " " + (1 - x->value);
+				string temp = to_string(x->ID) + " " + to_string(1 - x->value);
+
+				cout << "Fault: " << temp << endl;
 
 				auto it = find(allFaults.begin(), allFaults.end(), temp);
 
@@ -612,8 +592,6 @@ int main(int argc, char* argv[])
 	}
 
 	//printf("All faults length %d\n", (int)allFaults.size());
-
-	//cout << "All faults length " << (int)allFaults.size() << endl;
 
 	/* Simulate and print output */
 	while (!allOutputsAvailable)
