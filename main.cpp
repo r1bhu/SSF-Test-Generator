@@ -668,8 +668,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	//printf("All faults length %d\n", (int)allFaults.size());
-
 	/* Simulate and print output */
 	while (!allOutputsAvailable)
 	{
@@ -680,21 +678,8 @@ int main(int argc, char* argv[])
 	set<int> finalFaultList;
 	for (auto opNode : outNodesList)
 	{
-		//nodeList[opNode].
 		finalFaultList.insert(idFaultMapping[opNode].begin(), idFaultMapping[opNode].end());
-		//set_union(finalFaultList.begin(), finalFaultList.end(), idFaultMapping[opNode].begin(), idFaultMapping[opNode].end(), std::inserter(finalFaultList, finalFaultList.begin()));
 	}
-
-	//cout << "Size " << finalFaultList.size() << endl;
-
-	//printf("Size %d\n", (int)finalFaultList.size());
-
-	//for (int faultIdx : finalFaultList)
-	//{
-	//	//cout << endl << faultIdx << " maps to " << allFaults[faultIdx];
-	//	std::cout << allFaults[faultIdx] << std::endl;
-	//	//file << allFaults[faultIdx] << endl;
-	//}
 
 	string fileName = "faults.txt";
 
@@ -702,22 +687,10 @@ int main(int argc, char* argv[])
 
 	file.flush();
 
-	//set<string> faultStrings;
-
-	//for (int faultIdx : finalFaultList)
-	//{
-	//	//cout << endl << faultIdx << " maps to " << allFaults[faultIdx];
-	//	//std::cout << allFaults[faultIdx] << std::endl;
-	//	faultStrings.insert(allFaults[faultIdx]);
-	//}
-
 	if (file.is_open())
 	{
 		for (int faultIdx : finalFaultList)
 		{
-			//cout << endl << faultIdx << " maps to " << allFaults[faultIdx];
-			//std::cout << allFaults[faultIdx] << std::endl;
-			//file << faultStr << endl;
 			file << allFaults[faultIdx] << endl;
 		}
 
@@ -726,10 +699,6 @@ int main(int argc, char* argv[])
 		file.close();
 	}
 	
-
-	//cout << "Number of inputs: " << inpNodesList.size() << endl;
-	//cout << "Number of outputs: " << outNodesList.size() << endl;
-	//cout << outNodesList.size() << endl;
 	for (auto n : outNodesList)
 	{
 		cout << nodeIDMapping[n]->value;
