@@ -215,70 +215,6 @@ void processGateOutput()
 
 			}
 
-			if (!inpNotFound)
-			{
-
-				/* Add fault lists */
-				if (output == 0)
-				{
-					set<int> removeList;
-					set<int> intersectSet;
-					bool encounteredLowInp = false;
-					/* All faults causing values to non-controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-						if (g->node_inputs[i]->value == 0)
-						{
-
-							if (!encounteredLowInp)
-							{
-								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-								encounteredLowInp = true;
-							}
-							else
-							{
-								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
-
-								/* Clear tempFault list and transfer to tempFaultList */
-								tempFaultList.clear();
-
-								tempFaultList = intersectSet;
-
-								/* Clear intersect */
-								intersectSet.clear();
-							}
-
-						}
-						else
-						{
-
-							for (int x : idFaultMapping[g->node_inputs[i]->ID])
-							{
-								removeList.insert(x);
-								tempFaultList.erase(x);
-							}
-						}
-
-					}
-					for (int x : removeList)
-					{
-						tempFaultList.erase(x);
-					}
-
-				}
-				else
-				{
-					/* All faults causing values to controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-					}
-				}
-
-			}
-
 			break;
 
 		case OR:
@@ -293,72 +229,6 @@ void processGateOutput()
 
 				//output |= g->node_inputs[i]->value;
 				output = gateOutputLookupOr[g->node_inputs[i]->value][output];
-			}
-
-			if (!inpNotFound)
-			{
-				/* Add fault lists */
-				if (output == 1)
-				{
-					set<int> removeList;
-					set<int> intersectSet;
-					bool encounteredHighInp = false;
-					/* All faults causing values to non-controlling values. Need to find the intersection of faults that flip to 0. */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-
-						if (g->node_inputs[i]->value == 1)
-						{
-							//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-							/* If there are no faults, stop right there. If there are any add them to the list */
-							if (!encounteredHighInp)
-							{
-								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-								encounteredHighInp = true;
-							}
-							else
-							{
-								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
-
-								/* Clear tempFault list and transfer to tempFaultList */
-								tempFaultList.clear();
-
-								tempFaultList = intersectSet;
-
-								/* Clear intersect */
-								intersectSet.clear();
-							}
-
-
-						}
-						else if (g->node_inputs[i]->value == 0)
-						{
-
-							for (int x : idFaultMapping[g->node_inputs[i]->ID])
-							{
-								removeList.insert(x);
-								tempFaultList.erase(x);
-							}
-						}
-
-					}
-					for (int x : removeList)
-					{
-						tempFaultList.erase(x);
-					}
-
-				}
-				else
-				{
-					/* All faults causing values to controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-					}
-				}
 			}
 
 			break;
@@ -377,69 +247,6 @@ void processGateOutput()
 				output = gateOutputLookupOr[gateOutputLookupInv[g->node_inputs[i]->value]][output];
 			}
 
-			if (!inpNotFound)
-			{
-				/* Add fault lists */
-				if (output == 1)
-				{
-					set<int> removeList;
-					set<int> intersectSet;
-					bool encounteredLowInp = false;
-					/* All faults causing values to non-controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-
-						if (g->node_inputs[i]->value == 0)
-						{
-							if (!encounteredLowInp)
-							{
-								//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-								encounteredLowInp = true;
-							}
-							else
-							{
-								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
-
-								/* Clear tempFault list and transfer to tempFaultList */
-								tempFaultList.clear();
-
-								tempFaultList = intersectSet;
-
-								/* Clear intersect */
-								intersectSet.clear();
-							}
-
-						}
-						else if (g->node_inputs[i]->value == 1)
-						{
-							for (int x : idFaultMapping[g->node_inputs[i]->ID])
-							{
-								removeList.insert(x);
-								tempFaultList.erase(x);
-							}
-						}
-
-					}
-					for (int x : removeList)
-					{
-						tempFaultList.erase(x);
-					}
-
-				}
-				else
-				{
-					/* All faults causing values to controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-					}
-				}
-			}
-
 			break;
 
 		case NOR:
@@ -456,69 +263,6 @@ void processGateOutput()
 				output = gateOutputLookupAnd[gateOutputLookupInv[g->node_inputs[i]->value]][output];
 			}
 
-			if (!inpNotFound)
-			{
-				/* Add fault lists */
-				if (output == 0)
-				{
-					set<int> removeList;
-					set<int> intersectSet;
-					bool encounteredHighInp = false;
-					/* All faults causing values to non-controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-
-						if (g->node_inputs[i]->value == 1)
-						{
-							if (!encounteredHighInp)
-							{
-								//tempFaultList.insert(idFaultMapping[nodeList[i].ID].begin(), idFaultMapping[nodeList[i].ID].end());
-								tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-								encounteredHighInp = true;
-							}
-							else
-							{
-								set_intersection(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end(),
-									tempFaultList.begin(), tempFaultList.end(), std::inserter(intersectSet, intersectSet.begin()));
-
-								/* Clear tempFault list and transfer to tempFaultList */
-								tempFaultList.clear();
-
-								tempFaultList = intersectSet;
-
-								/* Clear intersect */
-								intersectSet.clear();
-							}
-
-						}
-						else if (g->node_inputs[i]->value == 0)
-						{
-
-							for (int x : idFaultMapping[g->node_inputs[i]->ID])
-							{
-								removeList.insert(x);
-								tempFaultList.erase(x);
-							}
-						}
-
-					}
-					for (int x : removeList)
-					{
-						tempFaultList.erase(x);
-					}
-
-				}
-				else
-				{
-					/* All faults causing values to controlling values */
-					for (int i = 0; i < g->node_inputs.size(); i++)
-					{
-						tempFaultList.insert(idFaultMapping[g->node_inputs[i]->ID].begin(), idFaultMapping[g->node_inputs[i]->ID].end());
-
-					}
-				}
-			}
-
 			break;
 
 		case INV:
@@ -531,11 +275,6 @@ void processGateOutput()
 			//output = !g->node_inputs[0]->value;
 			output = gateOutputLookupInv[g->node_inputs[0]->value];
 
-			if (!inpNotFound)
-			{
-				tempFaultList = idFaultMapping[g->node_inputs[0]->ID];
-			}
-
 			break;
 
 		case BUF:
@@ -547,12 +286,6 @@ void processGateOutput()
 
 			//output = g->node_inputs[0]->value;
 			output = gateOutputLookupBuf[g->node_inputs[0]->value];
-
-			if (!inpNotFound)
-			{
-				tempFaultList = idFaultMapping[g->node_inputs[0]->ID];
-
-			}
 
 			break;
 
@@ -590,14 +323,6 @@ void processGateOutput()
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 
-			string temp = to_string(g->node_outputs[0]->ID) + " stuck at " + to_string(1 - output);
-			auto it = find(allFaults.begin(), allFaults.end(), temp);
-
-			auto index = distance(allFaults.begin(), it);
-
-			tempFaultList.insert(index);
-
-			idFaultMapping[g->node_outputs[0]->ID] = tempFaultList;
 			g->node_outputs[0]->analysed = true;
 
 		}
