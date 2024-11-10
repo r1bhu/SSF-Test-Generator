@@ -388,8 +388,40 @@ pair<int, int> objective()
 	return result;
 }
 
-void podem()
+int podem()
 {
+	/* Check error at PO */
+	bool errorAtPO = false;
+	for (auto n : outNodesList)
+	{
+		if (nodeIDMapping[n]->value == VAL_D || nodeIDMapping[n]->value == VAL_DBAR)
+		{
+			errorAtPO = true;
+			break;
+		}
+	}
+
+	if (errorAtPO)
+	{
+		return 0; //SUCCESS
+	}
+	
+	/* Check for inconsistency at fault site */
+	if (nodeList[stuckAtFault]->value != gateOutputLookupInv[stuckAtValue])
+	{
+		return -1; // FAILURE
+	}
+	/* Check if D frontier is empty. If we've reached here it means there's no error at PO anyway */
+	if (dFrontier.empty())
+	{
+		return -1; // FAILURE
+	}
+
+	/* Get an objective */
+
+	/* Backtrace and get a PI */
+
+	/* Imply PI - no need to check that'd be done once you call PODEM subsequently */
 
 }
 
