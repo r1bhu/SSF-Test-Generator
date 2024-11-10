@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <fstream>
+#include <list>
 
 using namespace std;
 
@@ -45,6 +46,23 @@ const char* gateNames[] = {
 	"XNOR",
 };
 
+enum GateValue[] = {
+	VAL_ZERO,
+	VAL_ONE,
+	VAL_D,
+	VAL_DBAR,
+	VAL_X
+};
+
+enum GateValue gateOutputLookupAnd[5][5];
+enum GateValue gateOutputLookupOr[5][5];
+enum GateValue gateOutputLookupNand[5][5];
+enum GateValue gateOutputLookupNor[5][5];
+enum GateValue gateOutputLookupInv[5];
+enum GateValue gateOutputLookupBuf[5][5];
+enum GateValue gateOutputLookupXor[5][5];
+enum GateValue gateOutputLookupXnor[5][5];
+
 struct Gate
 {
 	vector<struct Node*> node_inputs;
@@ -69,6 +87,95 @@ vector<string> allFaults;
 
 map<int, set<int>> idFaultMapping;
 
+int stuckAtFault; // Fault for which we need to find the test vector
+int stuckAtValue; // The value that the fault at the above index si stuck at
+
+/* Define the D frontier in a list */
+list<Gate*> dFrontier;
+
+void prepareGateLookup()
+{
+	// AND gate
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			if (i == 0 || j == 0)
+			{
+				gateOutputLookupAnd[i][j] = VAL_ZERO;
+			}
+			else
+			{
+				if (i == 1) { gateOutputLookupAnd[i][j] = j; }
+				else if (j == 1) { gateOutputLookupAnd[i][j] = i; }
+				else if (i == VAL_X || j == VAL_X) { gateOutputLookupAnd[i][j] = VAL_X; }
+				else if (i == j) { gateOutputLookupAnd[i][j] = i; }
+				else
+				{
+					/* The inputs have to be amongst D and Dbar */
+					gateOutputLookupAnd[i][j] = 0;
+				}
+
+
+			}
+		}
+	}
+
+	// OR gate
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			if (i == 1 || j == 1)
+			{
+				gateOutputLookupOr[i][j] = VAL_ONE;
+			}
+			else
+			{
+				if (i == 0) { gateOutputLookupOr[i][j] = j; }
+				else if (j == 0) { gateOutputLookupOr[i][j] = i; }
+				else if (i == VAL_X || j == VAL_X) { gateOutputLookupOr[i][j] = VAL_X; }
+				else if (i == j) { gateOutputLookupOr[i][j] = i; }
+				else
+				{
+					/* The inputs have to be amongst D and Dbar */
+					gateOutputLookupOr[i][j] = 1;
+				}
+
+
+			}
+		}
+	}
+
+	// INV and buffer
+	for (int i = 0; i < 5; i++)
+	{
+		gateOutputLookupBuf[i] = i;
+
+		if (i == VAL_X)
+		{
+			gateOutputLookupInv = VAL_X;
+		}
+		else
+		{
+			if (i < 2) { gateOutputLookupInv[i] = 1 - i; }
+			else
+			{
+				gateOutputLookupInv[i] = 5 - i;
+			}
+		}
+	}
+
+	// NAND and NOR
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			gateLookupNand[i][j] = gateLookupInv[gateLookupAnd[i][j]];
+			gateLookupNor[i][j] = gateLookupInv[gateLookupOr[i][j]];
+		}
+	}
+}
 
 bool doRemove(Gate* argGate)
 {
@@ -504,6 +611,56 @@ void analyzeGateFaults()
 
 }
 
+void dFrontierSetup()
+{
+	for (auto g : gateList)
+	{
+		/* Just for the gates that have the faulty node as one of their inputs */
+		if (find(g->node_inputs.begin(), g->node_inputs.end(), stuckAtFault) != g->node_inputs.end())
+		{
+			/* Add to the D frontier */
+			dFrontier.push_back(g);
+		}
+	}
+}
+
+pair<int, int> objective()
+{
+	// Initially you just need to check if the node that we're talking about has its value set to the opp of the stuck at the value.
+	// If not, then we just need to returnn as objective the node idx and the vaue we want, which is the stuck at value;s complement
+	pair<int, int> result;
+
+	// Assume that the fault under consideration is 
+	if (nodeList[stuckAtFault]->value == -1)
+	{
+		// Just return the fault location and the complement of the stuck at value
+		result.first = stuckAtFault;
+		result.second = 1 - stuckAtValue;
+
+		return result;
+	}
+	else
+	{
+		/* Apparently some assignment was able to justify the fault presence, or at least not contradict it */
+		/* Now we just need to figure out the D frontier and pick a gate */
+		Gate* dFrontGate = dFrontier.front();
+
+		/* Choose an input to the dFront gate that is not the same ID as the fault node */
+		for (auto gI : dFrontGate->node_inputs)
+		{
+			if (gI->ID != stuckAtFault) // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
+		}
+
+	}
+
+	return result;
+}
+
+void podem()
+{
+
+}
+
 int main(int argc, char* argv[])
 {
 	/* Parse input file and populate nodeList and gateList */
@@ -591,10 +748,6 @@ int main(int argc, char* argv[])
 					//idFaultMapping[ID] = temp;
 				}
 
-
-
-				//cout << "ID mapping " << idFaultMapping[ID].size() << endl;
-
 			}
 			else
 			{
@@ -645,7 +798,16 @@ int main(int argc, char* argv[])
 
 	inpFile.close();
 
+	stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
+
+	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
+	stuckAtValue = 1;
+
+	/* Invoke the D setup setup method */
+	dFrontierSetup();
+
 	/* Invoke the test simulator */
+	podem();
 
 
 	return 0;
