@@ -46,7 +46,7 @@ const char* gateNames[] = {
 	"XNOR",
 };
 
-enum GateValue[] = {
+enum GateValue {
 	VAL_ZERO,
 	VAL_ONE,
 	VAL_D,
@@ -59,7 +59,7 @@ enum GateValue gateOutputLookupOr[5][5];
 enum GateValue gateOutputLookupNand[5][5];
 enum GateValue gateOutputLookupNor[5][5];
 enum GateValue gateOutputLookupInv[5];
-enum GateValue gateOutputLookupBuf[5][5];
+enum GateValue gateOutputLookupBuf[5];
 enum GateValue gateOutputLookupXor[5][5];
 enum GateValue gateOutputLookupXnor[5][5];
 
@@ -96,7 +96,7 @@ list<Gate*> dFrontier;
 void prepareGateLookup()
 {
 	// AND gate
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i <= 4; i++)
 	{
 		for (int j = 0; j < 5; j++)
 		{
@@ -106,15 +106,16 @@ void prepareGateLookup()
 			}
 			else
 			{
-				if (i == 1) { gateOutputLookupAnd[i][j] = j; }
-				else if (j == 1) { gateOutputLookupAnd[i][j] = i; }
+				if (i == 1) { gateOutputLookupAnd[i][j] = (GateValue)j; }
+				else if (j == 1) { gateOutputLookupAnd[i][j] = (GateValue)i; }
 				else if (i == VAL_X || j == VAL_X) { gateOutputLookupAnd[i][j] = VAL_X; }
-				else if (i == j) { gateOutputLookupAnd[i][j] = i; }
+				else if (i == j) { gateOutputLookupAnd[i][j] = (GateValue)i; }
 				else
 				{
 					/* The inputs have to be amongst D and Dbar */
-					gateOutputLookupAnd[i][j] = 0;
+					gateOutputLookupAnd[i][j] = VAL_ZERO;
 				}
+
 
 
 			}
@@ -132,14 +133,14 @@ void prepareGateLookup()
 			}
 			else
 			{
-				if (i == 0) { gateOutputLookupOr[i][j] = j; }
-				else if (j == 0) { gateOutputLookupOr[i][j] = i; }
+				if (i == 0) { gateOutputLookupOr[i][j] = (GateValue)j; }
+				else if (j == 0) { gateOutputLookupOr[i][j] = (GateValue)i; }
 				else if (i == VAL_X || j == VAL_X) { gateOutputLookupOr[i][j] = VAL_X; }
-				else if (i == j) { gateOutputLookupOr[i][j] = i; }
+				else if (i == j) { gateOutputLookupOr[i][j] = (GateValue)i; }
 				else
 				{
 					/* The inputs have to be amongst D and Dbar */
-					gateOutputLookupOr[i][j] = 1;
+					gateOutputLookupOr[i][j] = VAL_ONE;
 				}
 
 
@@ -150,18 +151,18 @@ void prepareGateLookup()
 	// INV and buffer
 	for (int i = 0; i < 5; i++)
 	{
-		gateOutputLookupBuf[i] = i;
+		gateOutputLookupBuf[i] = (GateValue)i;
 
 		if (i == VAL_X)
 		{
-			gateOutputLookupInv = VAL_X;
+			gateOutputLookupInv[i] = VAL_X;
 		}
 		else
 		{
-			if (i < 2) { gateOutputLookupInv[i] = 1 - i; }
+			if (i < 2) { gateOutputLookupInv[i] = (GateValue)(1 - i); }
 			else
 			{
-				gateOutputLookupInv[i] = 5 - i;
+				gateOutputLookupInv[i] = (GateValue)(5 - i);
 			}
 		}
 	}
@@ -171,8 +172,8 @@ void prepareGateLookup()
 	{
 		for (int j = 0; j < 5; j++)
 		{
-			gateLookupNand[i][j] = gateLookupInv[gateLookupAnd[i][j]];
-			gateLookupNor[i][j] = gateLookupInv[gateLookupOr[i][j]];
+			gateOutputLookupNand[i][j] = gateOutputLookupInv[gateOutputLookupAnd[i][j]];
+			gateOutputLookupNor[i][j] = gateOutputLookupInv[gateOutputLookupOr[i][j]];
 		}
 	}
 }
@@ -209,7 +210,8 @@ void processGateOutput()
 					break;
 				}
 
-				output &= g->node_inputs[i]->value;
+				//output &= g->node_inputs[i]->value;
+				output = gateOutputLookupAnd[g->node_inputs[i]->value][output];
 
 			}
 
@@ -289,7 +291,8 @@ void processGateOutput()
 					break;
 				}
 
-				output |= g->node_inputs[i]->value;
+				//output |= g->node_inputs[i]->value;
+				output = gateOutputLookupOr[g->node_inputs[i]->value][output];
 			}
 
 			if (!inpNotFound)
@@ -370,7 +373,8 @@ void processGateOutput()
 					break;
 				}
 
-				output |= !(g->node_inputs[i]->value);
+				//output |= !(g->node_inputs[i]->value);
+				output = gateOutputLookupOr[gateOutputLookupInv[g->node_inputs[i]->value]][output];
 			}
 
 			if (!inpNotFound)
@@ -448,7 +452,8 @@ void processGateOutput()
 					break;
 				}
 
-				output &= !g->node_inputs[i]->value;
+				//output &= !g->node_inputs[i]->value;
+				output = gateOutputLookupAnd[gateOutputLookupInv[g->node_inputs[i]->value]][output];
 			}
 
 			if (!inpNotFound)
@@ -523,7 +528,8 @@ void processGateOutput()
 				break;
 			}
 
-			output = !g->node_inputs[0]->value;
+			//output = !g->node_inputs[0]->value;
+			output = gateOutputLookupInv[g->node_inputs[0]->value];
 
 			if (!inpNotFound)
 			{
@@ -539,7 +545,8 @@ void processGateOutput()
 				break;
 			}
 
-			output = g->node_inputs[0]->value;
+			//output = g->node_inputs[0]->value;
+			output = gateOutputLookupBuf[g->node_inputs[0]->value];
 
 			if (!inpNotFound)
 			{
@@ -613,15 +620,15 @@ void analyzeGateFaults()
 
 void dFrontierSetup()
 {
-	for (auto g : gateList)
-	{
-		/* Just for the gates that have the faulty node as one of their inputs */
-		if (find(g->node_inputs.begin(), g->node_inputs.end(), stuckAtFault) != g->node_inputs.end())
-		{
-			/* Add to the D frontier */
-			dFrontier.push_back(g);
-		}
-	}
+	//for (auto g : gateList)
+	//{
+	//	/* Just for the gates that have the faulty node as one of their inputs */
+	//	if (find(g->node_inputs.begin(), g->node_inputs.end(), stuckAtFault) != g->node_inputs.end())
+	//	{
+	//		/* Add to the D frontier */
+	//		dFrontier.push_back(g);
+	//	}
+	//}
 }
 
 pair<int, int> objective()
@@ -648,7 +655,7 @@ pair<int, int> objective()
 		/* Choose an input to the dFront gate that is not the same ID as the fault node */
 		for (auto gI : dFrontGate->node_inputs)
 		{
-			if (gI->ID != stuckAtFault) // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
+			if (gI->ID != stuckAtFault) {} // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
 		}
 
 	}
@@ -798,16 +805,54 @@ int main(int argc, char* argv[])
 
 	inpFile.close();
 
-	stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
+	// Prepare the loookup tables for all the gates
+	prepareGateLookup();
+
+	/* Parse input vector and assign values to nodes */
+	for (int i = 0; i < strlen(argv[2]); i++)
+	{
+		/* Loop over the bits, find the node, and assign the value */
+		for (auto& x : nodeList)
+		{
+			if (x->ID == inpNodesList[i])
+			{
+				x->value = argv[2][i] - '0';
+
+				/* Add faults */
+				x->analysed = 1;
+				string temp = to_string(x->ID) + " stuck at " + to_string(1 - x->value);
+
+				auto it = find(allFaults.begin(), allFaults.end(), temp);
+
+				auto index = distance(allFaults.begin(), it);
+
+				idFaultMapping[x->ID].insert(index);
+			}
+		}
+	}
+
+	/* Simulate and print output */
+	while (!allOutputsAvailable)
+	{
+		processGateOutput();
+	}
+
+	// Print out the values of the output nodes
+	for (auto n : outNodesList)
+	{
+		cout << nodeIDMapping[n]->value;
+	}
+
+	//stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	stuckAtValue = 1;
+	//stuckAtValue = 1;
 
 	/* Invoke the D setup setup method */
-	dFrontierSetup();
+	//dFrontierSetup();
 
 	/* Invoke the test simulator */
-	podem();
+	//podem();
 
 
 	return 0;
