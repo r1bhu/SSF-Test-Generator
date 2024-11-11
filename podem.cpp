@@ -358,7 +358,7 @@ void dFrontierSetup()
 
 pair<int, int> objective()
 {
-	// Initially you just need to check if the node that we're talking about has its value set to the opp of the stuck at the value.
+	// Initially you just need to check if the faulty node has its value set to the opp of the stuck at the value.
 	// If not, then we just need to returnn as objective the node idx and the vaue we want, which is the stuck at value;s complement
 	pair<int, int> result;
 
@@ -380,7 +380,38 @@ pair<int, int> objective()
 		/* Choose an input to the dFront gate that is not the same ID as the fault node */
 		for (auto gI : dFrontGate->node_inputs)
 		{
-			if (gI->ID != stuckAtFault) {} // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
+			if (gI->ID != stuckAtFault) // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
+			{
+				
+				result.first = gI->ID;
+
+				// This needs to be set to a non ocntrolling value based on the gate of course
+				switch (dFrontGate->gType)
+				{
+				case AND:
+				case NAND:
+					result.second = 1;
+					break;
+
+				case OR:
+				case NOR:
+					result.second = 0;
+					break;
+
+				case INV:
+				case BUF:
+					// TODO What do I do here??? Or if nothing, where do I handle the case where the gatee is either a Buffer or an inverter
+					break;
+
+				default:
+					// TODO not sure if we need to handle the xor or the xnor case
+					break;
+
+
+				}
+
+				return result;
+			}
 		}
 
 	}
