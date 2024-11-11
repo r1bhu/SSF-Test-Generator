@@ -392,6 +392,27 @@ void imply()
 	{
 		processGateOutput();
 	}
+
+	/* Update dFrontier */
+	dFrontier.clear();
+
+	for (auto g : gateList)
+	{
+		/* If the gate has at least one of its inputs as D or D bar and the output is still X */
+		if (g->node_outputs[0]->value == VAL_X)
+		{
+			/* Check if one of the inputs is D */
+			for (auto node : g->node_inputs)
+			{
+				if (node->value == VAL_D || node->value == VAL_DBAR)
+				{
+					/* Add to dFrontier */
+					dFrontier.push_back(g);
+					break;
+				}
+			}
+		}
+	}
 }
 
 pair<int, int> objective()
@@ -714,25 +735,15 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	/* Simulate and print output */
-	while (!allOutputsAvailable)
-	{
-		processGateOutput();
-	}
+	resetNodes();
 
-	// Print out the values of the output nodes
-	for (auto n : outNodesList)
-	{
-		cout << nodeIDMapping[n]->value;
-	}
-
-	//stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	//stuckAtValue = 1;
+	stuckAtValue = 1;
 
 	/* Invoke the D setup setup method */
-	//dFrontierSetup();
+	dFrontierSetup();
 
 	/* Invoke the test simulator */
 	//podem();
