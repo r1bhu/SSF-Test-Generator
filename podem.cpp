@@ -385,7 +385,7 @@ void imply()
 	/* Set all gates to unresolved */
 	for (auto &g : gateList)
 	{
-		unresolvedGates.push_back(&g); //TODO make sure this is right
+		unresolvedGates.push_back(g); //TODO make sure this is right
 	}
 
 	while (!allOutputsAvailable)
