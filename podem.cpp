@@ -343,30 +343,35 @@ void processGateOutput()
 
 }
 
-void analyzeGateFaults()
-{
-	/* Find an unanalysed gate, whose all inputs have fault lists filled out */
-
-}
-
-void dFrontierSetup()
-{
-	//for (auto g : gateList)
-	//{
-	//	/* Just for the gates that have the faulty node as one of their inputs */
-	//	if (find(g->node_inputs.begin(), g->node_inputs.end(), stuckAtFault) != g->node_inputs.end())
-	//	{
-	//		/* Add to the D frontier */
-	//		dFrontier.push_back(g);
-	//	}
-	//}
-}
-
 void resetNodes()
 {
 	for (auto node : nodeList)
 	{
 		node->value = VAL_X;
+	}
+}
+
+void dFrontierRefresh()
+{
+	/* Update dFrontier */
+	dFrontier.clear();
+
+	for (auto g : gateList)
+	{
+		/* If the gate has at least one of its inputs as D or D bar and the output is still X */
+		if (g->node_outputs[0]->value == VAL_X)
+		{
+			/* Check if one of the inputs is D */
+			for (auto node : g->node_inputs)
+			{
+				if (node->value == VAL_D || node->value == VAL_DBAR)
+				{
+					/* Add to dFrontier */
+					dFrontier.push_back(g);
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -393,26 +398,8 @@ void imply()
 		processGateOutput();
 	}
 
-	/* Update dFrontier */
-	dFrontier.clear();
+	dFrontierRefresh();
 
-	for (auto g : gateList)
-	{
-		/* If the gate has at least one of its inputs as D or D bar and the output is still X */
-		if (g->node_outputs[0]->value == VAL_X)
-		{
-			/* Check if one of the inputs is D */
-			for (auto node : g->node_inputs)
-			{
-				if (node->value == VAL_D || node->value == VAL_DBAR)
-				{
-					/* Add to dFrontier */
-					dFrontier.push_back(g);
-					break;
-				}
-			}
-		}
-	}
 }
 
 pair<int, int> objective()
@@ -743,10 +730,10 @@ int main(int argc, char* argv[])
 	stuckAtValue = 1;
 
 	/* Invoke the D setup setup method */
-	dFrontierSetup();
+	dFrontierRefresh();
 
 	/* Invoke the test simulator */
-	//podem();
+	podem();
 
 
 	return 0;
