@@ -93,6 +93,12 @@ int stuckAtValue; // The value that the fault at the above index si stuck at
 /* Define the D frontier in a list */
 list<Gate*> dFrontier;
 
+/* Implication stack
+	If something doesn't work out pop the last immplication from the stack. 
+	This should help checkpoint and revisit the last working state, once we wipe clean the node values after a failure .
+	We need to maintain this stack only for the principal inputs as those are really what we care about. */
+list<pair<int, int>> implicationStack;
+
 void prepareGateLookup()
 {
 	// AND gate
@@ -356,6 +362,38 @@ void dFrontierSetup()
 	//}
 }
 
+void resetNodes()
+{
+	for (auto node : nodeList)
+	{
+		node->value = VAL_X;
+	}
+}
+
+void imply()
+{
+	/* Set all node values to X */
+	resetNodes();
+
+	/* Set input values based on implication stack */
+	for (auto imp : implicationStack)
+	{
+		auto node = nodeIDMapping[imp.first];
+		node->value = imp.second;
+	}
+
+	/* Set all gates to unresolved */
+	for (auto &g : gateList)
+	{
+		unresolvedGates.push_back(&g); //TODO make sure this is right
+	}
+
+	while (!allOutputsAvailable)
+	{
+		processGateOutput();
+	}
+}
+
 pair<int, int> objective()
 {
 	// Initially you just need to check if the faulty node has its value set to the opp of the stuck at the value.
@@ -410,13 +448,42 @@ pair<int, int> objective()
 
 				}
 
-				return result;
+				break;
+
 			}
 		}
 
 	}
 
 	return result;
+}
+
+pair<int, int> backtrace(pair<int, int> objec)
+{
+
+	/* if objec is already a PI, return
+	   Else, try to work through one of the gates' inputs that's not already been assigned a value */
+	if (!nodeIDMapping[objec.first]->gate_output_of.empty())
+	{
+		/* Loop over the inputs and see if you are able to get a positive  */
+		for (auto inp : ((Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->node_inputs)
+		{
+			if (inp->value != VAL_X)
+			{
+				continue;
+			}
+			auto g = (Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
+			int invParity = (g->gType + 1) % 2 ; // TODO Honestly the order of the enum just worked out brilliantly like this
+
+			pair<int, int> btRes = backtrace(pair<int, int>(inp->ID, objec.second ^ invParity));
+			if (btRes.first != -1)
+			{
+				return btRes;
+			}
+		}
+	}
+
+	return objec;
 }
 
 int podem()
@@ -449,10 +516,38 @@ int podem()
 	}
 
 	/* Get an objective */
+	pair<int, int> objec = objective();
 
 	/* Backtrace and get a PI */
+	pair<int, int> pI = backtrace(objec);
 
 	/* Imply PI - no need to check that'd be done once you call PODEM subsequently */
+	/* Add the newest pi to the stack and imply */
+	implicationStack.push_back(pI);
+	imply(); // I think we need to do this in a way that the the outputs aren't inputs
+
+	if (!podem()) // SUCCESS
+	{
+		return 0;
+	}
+
+	/* Reverse the implication. */
+	implicationStack.pop_back();
+	implicationStack.push_back(pair<int, int>(pI.first, 1 - pI.second));
+	imply();
+
+	if (!podem())
+	{
+		return 0;
+	}
+	else
+	{
+		/* Pop from stack and reset the nodes */
+		implicationStack.pop_back();
+		resetNodes(); // Reset nodes based on the implication stack
+
+		return -1;
+	}
 
 }
 
