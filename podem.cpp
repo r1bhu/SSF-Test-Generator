@@ -89,6 +89,7 @@ map<int, set<int>> idFaultMapping;
 
 int stuckAtFault; // Fault for which we need to find the test vector
 int stuckAtValue; // The value that the fault at the above index si stuck at
+int expectedTargetValue;
 
 /* Define the D frontier in a list */
 list<Gate*> dFrontier;
@@ -210,7 +211,7 @@ void processGateOutput()
 
 			for (int i = 0; i < g->node_inputs.size(); i++)
 			{
-				if (g->node_inputs[i]->value == -1)
+				if (g->node_inputs[i]->analysed == false)
 				{
 					inpNotFound = true;
 					break;
@@ -227,7 +228,7 @@ void processGateOutput()
 			output = 0;
 			for (int i = 0; i < g->node_inputs.size(); i++)
 			{
-				if (g->node_inputs[i]->value == -1)
+				if (g->node_inputs[i]->analysed == false)
 				{
 					inpNotFound = true;
 					break;
@@ -243,7 +244,7 @@ void processGateOutput()
 			output = 0;
 			for (int i = 0; i < g->node_inputs.size(); i++)
 			{
-				if (g->node_inputs[i]->value == -1)
+				if (g->node_inputs[i]->analysed == false)
 				{
 					inpNotFound = true;
 					break;
@@ -259,7 +260,7 @@ void processGateOutput()
 			output = 1;
 			for (int i = 0; i < g->node_inputs.size(); i++)
 			{
-				if (g->node_inputs[i]->value == -1)
+				if (g->node_inputs[i]->analysed == false)
 				{
 					inpNotFound = true;
 					break;
@@ -272,7 +273,7 @@ void processGateOutput()
 			break;
 
 		case INV:
-			if (g->node_inputs[0]->value == -1)
+			if (g->node_inputs[0]->analysed == false)
 			{
 				inpNotFound = true;
 				break;
@@ -284,7 +285,7 @@ void processGateOutput()
 			break;
 
 		case BUF:
-			if (g->node_inputs[0]->value == -1)
+			if (g->node_inputs[0]->analysed == false)
 			{
 				inpNotFound = true;
 				break;
@@ -295,37 +296,24 @@ void processGateOutput()
 
 			break;
 
-		case XOR:
-			output = 0;
-			for (int i = 0; i < g->node_inputs.size(); i++)
-			{
-				if (g->node_inputs[i]->value == -1)
-				{
-					inpNotFound = true;
-					break;
-				}
-
-				output ^= g->node_inputs[i]->value;
-			}
-			break;
-
-		case XNOR:
-			output = 1;
-			for (int i = 0; i < g->node_inputs.size(); i++)
-			{
-				if (g->node_inputs[i]->value == -1)
-				{
-					inpNotFound = true;
-					break;
-				}
-
-				output ^= g->node_inputs[i]->value;
-			}
-			break;
 		}
 
 		if (!inpNotFound)
 		{
+			if (g->node_outputs[0]->ID == stuckAtFault)
+			{
+				if (stuckAtValue == 0)
+				{
+					if (output == 1)
+					{
+						output = VAL_D;
+					}
+					else
+					{
+						output = VAL_DBAR;
+					}
+				}
+			}
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 
@@ -348,6 +336,7 @@ void resetNodes()
 	for (auto node : nodeList)
 	{
 		node->value = VAL_X;
+		node->analysed = false;
 	}
 }
 
@@ -387,6 +376,12 @@ void imply()
 		node->value = imp.second;
 	}
 
+	/* Set analyzed to true for input nodes */
+	for (auto node : inpNodesList)
+	{
+		nodeIDMapping[node]->analysed = true;
+	}
+
 	/* Set all gates to unresolved */
 	for (auto &g : gateList)
 	{
@@ -409,7 +404,7 @@ pair<int, int> objective()
 	pair<int, int> result;
 
 	// Assume that the fault under consideration is 
-	if (nodeList[stuckAtFault]->value == -1)
+	if (nodeList[stuckAtFault]->analysed == false)
 	{
 		// Just return the fault location and the complement of the stuck at value
 		result.first = stuckAtFault;
@@ -500,23 +495,20 @@ int podem()
 	bool errorAtPO = false;
 	for (auto n : outNodesList)
 	{
-		if (nodeIDMapping[n]->value == VAL_D || nodeIDMapping[n]->value == VAL_DBAR)
+		if ((nodeIDMapping[n]->value == VAL_D || nodeIDMapping[n]->value == VAL_DBAR) && nodeIDMapping[n]->analysed)
 		{
 			errorAtPO = true;
+			return 0; //SUCCESS
 			break;
 		}
 	}
-
-	if (errorAtPO)
-	{
-		return 0; //SUCCESS
-	}
 	
 	/* Check for inconsistency at fault site */
-	if (nodeList[stuckAtFault]->value != gateOutputLookupInv[stuckAtValue])
+	if (nodeIDMapping[stuckAtFault]->analysed && (nodeIDMapping[stuckAtFault]->value != expectedTargetValue))
 	{
 		return -1; // FAILURE
 	}
+
 	/* Check if D frontier is empty. If we've reached here it means there's no error at PO anyway */
 	if (dFrontier.empty())
 	{
@@ -532,6 +524,7 @@ int podem()
 	/* Imply PI - no need to check that'd be done once you call PODEM subsequently */
 	/* Add the newest pi to the stack and imply */
 	implicationStack.push_back(pI);
+
 	imply(); // I think we need to do this in a way that the the outputs aren't inputs
 
 	if (!podem()) // SUCCESS
@@ -542,6 +535,7 @@ int podem()
 	/* Reverse the implication. */
 	implicationStack.pop_back();
 	implicationStack.push_back(pair<int, int>(pI.first, 1 - pI.second));
+
 	imply();
 
 	if (!podem())
@@ -624,27 +618,7 @@ int main(int argc, char* argv[])
 
 				nodeList.back()->gate_input_to.push_back((void*)gateList.back());
 
-				if (idFaultMapping.find(ID) != idFaultMapping.end())
-				{
-					//continue;
-				}
-				else
-				{
-					string idFault1 = to_string(ID) + " stuck at 0";
-
-					string idFault2 = to_string(ID) + " stuck at 1";
-
-
-					set<int> temp;
-
-					temp.insert(allFaults.size());
-					allFaults.push_back(idFault1);
-
-					temp.insert(allFaults.size());
-					allFaults.push_back(idFault2);
-
-					//idFaultMapping[ID] = temp;
-				}
+				
 
 			}
 			else
@@ -700,27 +674,17 @@ int main(int argc, char* argv[])
 	prepareGateLookup();
 
 	/* Parse input vector and assign values to nodes */
-	for (int i = 0; i < strlen(argv[2]); i++)
-	{
-		/* Loop over the bits, find the node, and assign the value */
-		for (auto& x : nodeList)
-		{
-			if (x->ID == inpNodesList[i])
-			{
-				x->value = argv[2][i] - '0';
-
-				/* Add faults */
-				x->analysed = 1;
-				string temp = to_string(x->ID) + " stuck at " + to_string(1 - x->value);
-
-				auto it = find(allFaults.begin(), allFaults.end(), temp);
-
-				auto index = distance(allFaults.begin(), it);
-
-				idFaultMapping[x->ID].insert(index);
-			}
-		}
-	}
+	//for (int i = 0; i < strlen(argv[2]); i++)
+	//{
+	//	/* Loop over the bits, find the node, and assign the value */
+	///	for (auto& x : nodeList)
+	//	{
+	//		if (x->ID == inpNodesList[i])
+	//		{
+	//			x->value = argv[2][i] - '0';
+	//		}
+	//	}
+	//}
 
 	resetNodes();
 
@@ -729,11 +693,28 @@ int main(int argc, char* argv[])
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
 	stuckAtValue = 1;
 
+	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
+
+	/* Add to the D frontier all the gates that are fed from stuckAtFault *
+
 	/* Invoke the D setup setup method */
 	dFrontierRefresh();
 
 	/* Invoke the test simulator */
-	podem();
+	int ret = podem();
+
+	if (ret)
+	{
+		cout << "Failed -----------------" << endl;
+		return 0;
+
+	}
+	cout << "DONE  --------------------\n";
+	/* Print out the implication stack */
+	for (auto imp : implicationStack)
+	{
+		cout << imp.first << " " << imp.second << endl;
+	}
 
 
 	return 0;
