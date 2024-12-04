@@ -102,6 +102,8 @@ list<pair<int, int>> implicationStack;
 
 bool implicationDone = false;
 
+bool faultSiteActivated = false;
+
 void prepareGateLookup()
 {
 	// AND gate
@@ -316,7 +318,10 @@ void processGateOutput()
 					{
 						output = VAL_D;
 					}
-					else
+				}
+				else
+				{
+					if (output == 0)
 					{
 						output = VAL_DBAR;
 					}
@@ -327,8 +332,8 @@ void processGateOutput()
 
 			g->node_outputs[0]->analysed = true;
 
-			cout << "------- Implication---------" << endl;
-			cout << "output: " << output << endl;;
+			//cout << "------- Implication---------" << endl;
+			//cout << "output: " << output << endl;;
 
 		}
 	}
@@ -420,7 +425,7 @@ pair<int, int> objective()
 	result.first = 1001;
 
 	// Assume that the fault under consideration is g
-	if (nodeList[stuckAtFault]->analysed == false)
+	if (!faultSiteActivated)
 	{
 		// Just return the fault location and the complement of the stuck at value
 		result.first = stuckAtFault;
@@ -537,17 +542,28 @@ int podem()
 	}
 	
 	/* Check for inconsistency at fault site */
-	if (implicationDone && (nodeIDMapping[stuckAtFault]->value != expectedTargetValue))
+	if (implicationDone && (nodeIDMapping[stuckAtFault]->value <= VAL_ONE))
 	{
 		cout << "The faulty value at the node was " << nodeIDMapping[stuckAtFault]->value << endl;
 		return -1; // FAILURE
+	}
+	else if (implicationDone && (nodeIDMapping[stuckAtFault]->value == expectedTargetValue))
+	{
+		/* Fault site is now activated */
+		faultSiteActivated = true;
 	}
 
 	/* Check if D frontier is empty. If we've reached here it means there's no error at PO anyway */
 	if (dFrontier.empty() && !implicationStack.empty())
 	{
 		cout << "The faulty value at the node was " << nodeIDMapping[stuckAtFault]->value << endl;
-		return -1; // FAILURE
+
+		if (faultSiteActivated)
+		{
+			return -1;
+		}
+
+		
 	}
 
 	/* Get an objective */
@@ -578,9 +594,9 @@ int podem()
 		cout << elem->gType << endl;
 	}
 
-	if (podemCounter == 2)
+	if (podemCounter == 6)
 	{
-		return 0;
+		//return 0;
 	}
 
 	implicationDone = true;
@@ -752,10 +768,10 @@ int main(int argc, char* argv[])
 
 	resetNodes();
 
-	stuckAtFault = 2; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = 16; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	stuckAtValue = 1;
+	stuckAtValue = 0;
 
 	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
 
