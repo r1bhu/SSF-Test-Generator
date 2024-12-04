@@ -100,6 +100,8 @@ list<Gate*> dFrontier;
 	We need to maintain this stack only for the principal inputs as those are really what we care about. */
 list<pair<int, int>> implicationStack;
 
+bool implicationDone = false;
+
 void prepareGateLookup()
 {
 	// AND gate
@@ -192,6 +194,7 @@ bool doRemove(Gate* argGate)
 
 void processGateOutput()
 {
+	cout << "Total unresolved gates: " << unresolvedGates.size() << endl;
 	for (auto& g : unresolvedGates)
 	{
 		int output = 0;
@@ -241,22 +244,6 @@ void processGateOutput()
 			break;
 
 		case NAND:
-			output = 0;
-			for (int i = 0; i < g->node_inputs.size(); i++)
-			{
-				if (g->node_inputs[i]->analysed == false)
-				{
-					inpNotFound = true;
-					break;
-				}
-
-				//output |= !(g->node_inputs[i]->value);
-				output = gateOutputLookupOr[gateOutputLookupInv[g->node_inputs[i]->value]][output];
-			}
-
-			break;
-
-		case NOR:
 			output = 1;
 			for (int i = 0; i < g->node_inputs.size(); i++)
 			{
@@ -266,9 +253,30 @@ void processGateOutput()
 					break;
 				}
 
-				//output &= !g->node_inputs[i]->value;
-				output = gateOutputLookupAnd[gateOutputLookupInv[g->node_inputs[i]->value]][output];
+				//output |= !(g->node_inputs[i]->value);
+				//output = gateOutputLookupOr[gateOutputLookupInv[g->node_inputs[i]->value]][output];
+				output = gateOutputLookupAnd[output][g->node_inputs[i]->value];
 			}
+			output = gateOutputLookupInv[output];
+
+			break;
+
+		case NOR:
+			output = 0;
+			for (int i = 0; i < g->node_inputs.size(); i++)
+			{
+				if (g->node_inputs[i]->analysed == false)
+				{
+					inpNotFound = true;
+					break;
+				}
+
+				//output &= !g->node_inputs[i]->value;
+				//output = gateOutputLookupAnd[gateOutputLookupInv[g->node_inputs[i]->value]][output];
+				
+				output = gateOutputLookupOr[g->node_inputs[i]->value][output];
+			}
+			output = gateOutputLookupInv[output];
 
 			break;
 
@@ -319,6 +327,9 @@ void processGateOutput()
 
 			g->node_outputs[0]->analysed = true;
 
+			cout << "------- Implication---------" << endl;
+			cout << "output: " << output << endl;;
+
 		}
 	}
 
@@ -362,6 +373,7 @@ void dFrontierRefresh()
 			}
 		}
 	}
+
 }
 
 void imply()
@@ -372,6 +384,7 @@ void imply()
 	/* Set input values based on implication stack */
 	for (auto imp : implicationStack)
 	{
+		cout << "Implication: " << imp.first << " " << imp.second << endl;
 		auto node = nodeIDMapping[imp.first];
 		node->value = imp.second;
 	}
@@ -386,7 +399,9 @@ void imply()
 	for (auto &g : gateList)
 	{
 		unresolvedGates.push_back(g); //TODO make sure this is right
+		g->resolved = false;
 	}
+	allOutputsAvailable = false;
 
 	while (!allOutputsAvailable)
 	{
@@ -402,8 +417,9 @@ pair<int, int> objective()
 	// Initially you just need to check if the faulty node has its value set to the opp of the stuck at the value.
 	// If not, then we just need to returnn as objective the node idx and the vaue we want, which is the stuck at value;s complement
 	pair<int, int> result;
+	result.first = 1001;
 
-	// Assume that the fault under consideration is 
+	// Assume that the fault under consideration is g
 	if (nodeList[stuckAtFault]->analysed == false)
 	{
 		// Just return the fault location and the complement of the stuck at value
@@ -466,8 +482,11 @@ pair<int, int> backtrace(pair<int, int> objec)
 
 	/* if objec is already a PI, return
 	   Else, try to work through one of the gates' inputs that's not already been assigned a value */
+	//if (find(inpNodesList.begin(), inpNodesList.end(), objec.first) != inpNodesList.end())
 	if (!nodeIDMapping[objec.first]->gate_output_of.empty())
 	{
+		//cout << "Entered here\n";
+		cout << ((struct Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->gType << " Gate type\n";
 		/* Loop over the inputs and see if you are able to get a positive  */
 		for (auto inp : ((Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->node_inputs)
 		{
@@ -476,14 +495,25 @@ pair<int, int> backtrace(pair<int, int> objec)
 				continue;
 			}
 			auto g = (Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
+
 			int invParity = (g->gType + 1) % 2 ; // TODO Honestly the order of the enum just worked out brilliantly like this
 
 			pair<int, int> btRes = backtrace(pair<int, int>(inp->ID, objec.second ^ invParity));
+
 			if (btRes.first != -1)
 			{
 				return btRes;
 			}
 		}
+	}
+	else
+	{
+		// If the stuck at fault is at a primary input
+		if (objec.first == stuckAtFault)
+		{
+			objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
+		}
+		
 	}
 
 	return objec;
@@ -491,11 +521,14 @@ pair<int, int> backtrace(pair<int, int> objec)
 
 int podem()
 {
+	static int podemCounter = 0;
+
+	podemCounter++;
 	/* Check error at PO */
 	bool errorAtPO = false;
 	for (auto n : outNodesList)
 	{
-		if ((nodeIDMapping[n]->value == VAL_D || nodeIDMapping[n]->value == VAL_DBAR) && nodeIDMapping[n]->analysed)
+		if ((nodeIDMapping[n]->value == VAL_D || nodeIDMapping[n]->value == VAL_DBAR) && implicationDone)
 		{
 			errorAtPO = true;
 			return 0; //SUCCESS
@@ -504,22 +537,30 @@ int podem()
 	}
 	
 	/* Check for inconsistency at fault site */
-	if (nodeIDMapping[stuckAtFault]->analysed && (nodeIDMapping[stuckAtFault]->value != expectedTargetValue))
+	if (implicationDone && (nodeIDMapping[stuckAtFault]->value != expectedTargetValue))
 	{
+		cout << "The faulty value at the node was " << nodeIDMapping[stuckAtFault]->value << endl;
 		return -1; // FAILURE
 	}
 
 	/* Check if D frontier is empty. If we've reached here it means there's no error at PO anyway */
-	if (dFrontier.empty())
+	if (dFrontier.empty() && !implicationStack.empty())
 	{
+		cout << "The faulty value at the node was " << nodeIDMapping[stuckAtFault]->value << endl;
 		return -1; // FAILURE
 	}
 
 	/* Get an objective */
 	pair<int, int> objec = objective();
 
+	cout << "Objective: ";
+	cout << objec.first << " " << objec.second << endl;
+
+
 	/* Backtrace and get a PI */
 	pair<int, int> pI = backtrace(objec);
+
+	cout << "Backtraced PI: " << pI.first << " " << pI.second << endl;
 
 	/* Imply PI - no need to check that'd be done once you call PODEM subsequently */
 	/* Add the newest pi to the stack and imply */
@@ -527,16 +568,39 @@ int podem()
 
 	imply(); // I think we need to do this in a way that the the outputs aren't inputs
 
+	for (auto elem : nodeList)
+	{
+		cout << "Implied value of node " << elem->ID << " was " << elem->value << endl;
+	}
+	cout << "D frontier consists of: " << endl;
+	for (auto elem : dFrontier)
+	{
+		cout << elem->gType << endl;
+	}
+
+	if (podemCounter == 2)
+	{
+		return 0;
+	}
+
+	implicationDone = true;
+
+	//return 0;
+
 	if (!podem()) // SUCCESS
 	{
 		return 0;
 	}
+
+	cout << "This imply didn't work, lemme change\n";
 
 	/* Reverse the implication. */
 	implicationStack.pop_back();
 	implicationStack.push_back(pair<int, int>(pI.first, 1 - pI.second));
 
 	imply();
+
+	
 
 	if (!podem())
 	{
@@ -575,6 +639,8 @@ int main(int argc, char* argv[])
 		bool readingInpNodes = false;
 		bool readingOutNodes = false;
 
+		int gateOutNodeID;
+
 		while (inpFileEntry >> token)
 		{
 			/* Check if it's gate or input or output */
@@ -594,11 +660,15 @@ int main(int argc, char* argv[])
 				}
 
 				gateList.push_back(newGate);
-				unresolvedGates.push_back(newGate);
+				//unresolvedGates.push_back(newGate);
 			}
 			else if (readingGate)
 			{
 				int ID = stoi(token);
+
+				/* Store in the variable gateOutNodeID */
+				gateOutNodeID = ID;
+
 				struct Node* newNode = new struct Node;
 				if (nodeIDMapping.find(ID) != nodeIDMapping.end())
 				{
@@ -658,8 +728,15 @@ int main(int argc, char* argv[])
 
 			gateList.back()->node_inputs.pop_back();
 
+
+
 			nodeList.back()->gate_input_to.pop_back();
+
+
+			nodeIDMapping[gateOutNodeID]->gate_output_of.push_back((void*)gateList.back());
 			//nodeList.back()->gate_output_of.push_back((void *)gateList.back());
+
+			cout << "Node " << gateOutNodeID << " is output of gate type " << gateList.back()->gType << endl;
 
 			readingGate = false;
 		}
@@ -673,32 +750,24 @@ int main(int argc, char* argv[])
 	// Prepare the loookup tables for all the gates
 	prepareGateLookup();
 
-	/* Parse input vector and assign values to nodes */
-	//for (int i = 0; i < strlen(argv[2]); i++)
-	//{
-	//	/* Loop over the bits, find the node, and assign the value */
-	///	for (auto& x : nodeList)
-	//	{
-	//		if (x->ID == inpNodesList[i])
-	//		{
-	//			x->value = argv[2][i] - '0';
-	//		}
-	//	}
-	//}
-
 	resetNodes();
 
-	stuckAtFault = 0; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = 2; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
 	stuckAtValue = 1;
 
 	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
 
-	/* Add to the D frontier all the gates that are fed from stuckAtFault *
-
 	/* Invoke the D setup setup method */
 	dFrontierRefresh();
+
+	/* Add to dFrontier before starting */
+	cout << "Got to this point\n";
+	for (auto g : nodeIDMapping[stuckAtFault]->gate_input_to)
+	{
+		//dFrontier.push_back((struct Gate*)g);
+	}
 
 	/* Invoke the test simulator */
 	int ret = podem();
