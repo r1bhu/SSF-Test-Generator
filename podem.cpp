@@ -521,7 +521,7 @@ pair<int, int> backtrace(pair<int, int> objec)
 	else
 	{
 		auto g = (struct Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
-		int invParity = (g->gType > 2) && (g->gType <= 4);
+		int invParity = (g->gType >= 2) && (g->gType <= 4);
 		for (auto elem : g->node_inputs)
 		{
 			result = backtrace(pair<int, int>(elem->ID, objec.second ^ invParity));
@@ -671,12 +671,9 @@ int podem()
 
 	//return 0;
 
-	if (nodeIDMapping[objec.first]->value == objec.second || nodeIDMapping[objec.first]->value == 3 - objec.second)
+	if (!podem()) // SUCCESS
 	{
-		if (!podem()) // SUCCESS
-		{
-			return 0;
-		}
+		return 0;
 	}
 	
 
@@ -699,12 +696,9 @@ int podem()
 		cout << elem->gType << endl;
 	}
 
-	if (nodeIDMapping[objec.first]->value == objec.second || nodeIDMapping[objec.first]->value == 3 - objec.second)
+	if (!podem()) // SUCCESS
 	{
-		if (!podem()) // SUCCESS
-		{
-			return 0;
-		}
+		return 0;
 	}
 
 
@@ -852,10 +846,10 @@ int main(int argc, char* argv[])
 
 	resetNodes();
 
-	stuckAtFault = 18; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = 92; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	stuckAtValue = 1;
+	stuckAtValue = 0;
 
 	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
 
