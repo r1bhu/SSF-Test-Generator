@@ -425,7 +425,7 @@ pair<int, int> objective()
 	result.first = 1001;
 
 	// Assume that the fault under consideration is g
-	if (!faultSiteActivated)
+	if (nodeIDMapping[stuckAtFault]->value != expectedTargetValue)
 	{
 		// Just return the fault location and the complement of the stuck at value
 		result.first = stuckAtFault;
@@ -485,7 +485,7 @@ pair<int, int> objective()
 pair<int, int> backtrace(pair<int, int> objec)
 {
 	pair <int, int> result;
-
+	result.first = -1;
 	/* if it is a PI - 
 		If part of the implication stack, return -1
 		If not a part, return the objec
@@ -494,29 +494,12 @@ pair<int, int> backtrace(pair<int, int> objec)
 
 	if (nodeIDMapping[objec.first]->gate_output_of.empty())
 	{
-		/* See if it's on the implication stack */
-		bool isImplied = false;
-		for (auto elem : implicationStack)
+		if (objec.first == stuckAtFault)
 		{
-			if (elem.first == objec.first)
-			{
-				isImplied = true;
-				break;
-			}
+			objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
 		}
-		if (isImplied)
-		{
-			result.first = -1;
-			return result;
-		}
-		else
-		{
-			if (objec.first == stuckAtFault)
-			{
-				objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
-			}
-			return objec; //Hasn't been assigned yet
-		}
+		return objec; //Hasn't been assigned yet
+		
 	}
 	else
 	{
@@ -524,19 +507,16 @@ pair<int, int> backtrace(pair<int, int> objec)
 		int invParity = (g->gType >= 2) && (g->gType <= 4);
 		for (auto elem : g->node_inputs)
 		{
-			result = backtrace(pair<int, int>(elem->ID, objec.second ^ invParity));
-			if (result.first != -1)
+			if (elem->value == VAL_X)
 			{
-				return result;
+				return backtrace(pair<int, int>(elem->ID, objec.second ^ invParity));
 			}
-			else
-			{
-				
-			}
+			
+			
 		}
 	}
 
-	return objec;
+	return result;
 
 
 
