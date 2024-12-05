@@ -104,6 +104,8 @@ bool implicationDone = false;
 
 bool faultSiteActivated = false;
 
+string testVecValue[5] = { "0", "1", "1", "0", "X" };
+
 void prepareGateLookup()
 {
 	// AND gate
@@ -378,7 +380,6 @@ void imply()
 	/* Set input values based on implication stack */
 	for (auto imp : implicationStack)
 	{
-		cout << "Implication: " << imp.first << " " << imp.second << endl;
 		auto node = nodeIDMapping[imp.first];
 		node->value = imp.second;
 	}
@@ -551,10 +552,6 @@ int podem()
 	imply(); // I think we need to do this in a way that the the outputs aren't inputs
 
 	dFrontierRefresh();
-	for (auto elem : dFrontier)
-	{
-		cout << elem->gType << endl;
-	}
 
 	implicationDone = true;
 
@@ -570,10 +567,6 @@ int podem()
 	imply();
 
 	dFrontierRefresh();
-	for (auto elem : dFrontier)
-	{
-		cout << elem->gType << endl;
-	}
 
 	if (!podem()) // SUCCESS
 	{
@@ -721,10 +714,10 @@ int main(int argc, char* argv[])
 
 	resetNodes();
 
-	stuckAtFault = 179; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = atoi(argv[2]);// 179; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	stuckAtValue = 1;
+	stuckAtValue = atoi(argv[3]);// 1;
 
 	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
 
@@ -736,17 +729,26 @@ int main(int argc, char* argv[])
 
 	if (ret)
 	{
-		cout << "Failed -----------------" << endl;
+		cout << "Failed -----------------" << endl << "Fault is undetectable" << endl;
 		return 0;
 
 	}
 	cout << "DONE  --------------------\n";
 	/* Print out the implication stack */
+	resetNodes();
 	for (auto imp : implicationStack)
 	{
-		cout << imp.first << " " << imp.second << endl;
+		//cout << imp.first << " " << imp.second << endl;
+		nodeIDMapping[imp.first]->value = imp.second;
 	}
 
+	cout << "The test vector is: ";
+
+	for (auto elem : inpNodesList)
+	{
+		cout << testVecValue[nodeIDMapping[elem]->value];		
+	}
+	cout << endl;
 
 	return 0;
 }

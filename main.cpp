@@ -476,7 +476,7 @@ void processGateOutput()
 			g->node_outputs[0]->value = output;
 			g->resolved = true; //can be removed
 
-			string temp = to_string(g->node_outputs[0]->ID) + " stuck at " + to_string(1 - output);
+			string temp = to_string(g->node_outputs[0]->ID) + " " + to_string(1 - output);
 			auto it = find(allFaults.begin(), allFaults.end(), temp);
 
 			auto index = distance(allFaults.begin(), it);
@@ -575,9 +575,9 @@ int main(int argc, char* argv[])
 				}
 				else
 				{
-					string idFault1 = to_string(ID) + " stuck at 0";
+					string idFault1 = to_string(ID) + " 0";
 
-					string idFault2 = to_string(ID) + " stuck at 1";
+					string idFault2 = to_string(ID) + " 1";
 
 
 					set<int> temp;
@@ -657,7 +657,7 @@ int main(int argc, char* argv[])
 
 				/* Add faults */
 				x->analysed = 1;
-				string temp = to_string(x->ID) + " stuck at " + to_string(1 - x->value);
+				string temp = to_string(x->ID) + " " + to_string(1 - x->value);
 
 				auto it = find(allFaults.begin(), allFaults.end(), temp);
 
@@ -676,32 +676,83 @@ int main(int argc, char* argv[])
 
 	/* Write the faults to file */
 	set<int> finalFaultList;
+	
 	for (auto opNode : outNodesList)
 	{
 		finalFaultList.insert(idFaultMapping[opNode].begin(), idFaultMapping[opNode].end());
 	}
 
-	string fileName = "faults.txt";
 
-	ofstream file(fileName, std::ios::trunc);
+	/* If an additional filename was passed, parse it and get the set of faults */
+	bool faultFilePassed = argc > 3;
 
-	file.flush();
-
-	if (file.is_open())
+	vector<int> detectedFaults;
+	if (faultFilePassed)
 	{
-		for (int faultIdx : finalFaultList)
+		ifstream faultFile(argv[3]);
+
+		if (!faultFile.is_open())
 		{
-			file << allFaults[faultIdx] << endl;
+			return -EINVAL;
 		}
 
-		//cout << endl;
+		while (getline(faultFile, inpLine))
+		{
+			auto it = find(allFaults.begin(), allFaults.end(), inpLine);
+			if (it != allFaults.end())
+			{
+				int myIdx = distance(allFaults.begin(), it);
+				if (finalFaultList.count(myIdx) > 0)
+				{
+					detectedFaults.push_back(myIdx);
+				}
+			}
 
+
+
+		}
+
+		faultFile.close();
+	}
+
+	string fileName = "faults.txt";
+	
+	ofstream file(fileName, std::ios::trunc);
+	
+	file.flush();
+	
+	if (file.is_open())
+	 {
+		if (faultFilePassed)
+		{
+			for (int faultIdx : detectedFaults)
+			{
+				file << allFaults[faultIdx] << endl;
+			}
+
+			file << "--------------------" << endl;
+			file << detectedFaults.size() << " faults" << endl;
+		}
+		else
+		{
+			for (int faultIdx : finalFaultList)
+			{
+				file << allFaults[faultIdx] << endl;
+			}
+
+			file << "--------------------" << endl;
+			file << finalFaultList.size() << " faults" << endl;
+		}
+		
 		file.close();
 	}
+
+
+	
 	
 	for (auto n : outNodesList)
 	{
-		cout << nodeIDMapping[n]->value;
+		//cout << nodeIDMapping[n]->value;
 	}
 
 	return 0;
