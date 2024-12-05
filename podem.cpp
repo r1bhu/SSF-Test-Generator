@@ -369,7 +369,7 @@ void dFrontierRefresh()
 			/* Check if one of the inputs is D */
 			for (auto node : g->node_inputs)
 			{
-				if (node->value == VAL_D || node->value == VAL_DBAR)
+				if ((node->value == VAL_D) || (node->value == VAL_DBAR))
 				{
 					/* Add to dFrontier */
 					dFrontier.push_back(g);
@@ -442,7 +442,7 @@ pair<int, int> objective()
 		/* Choose an input to the dFront gate that is not the same ID as the fault node */
 		for (auto gI : dFrontGate->node_inputs)
 		{
-			if (gI->ID != stuckAtFault) // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
+			if (gI->value == VAL_X) // This might not be sufficient - what if there's a fanout?? What'd be the D frontier in this case? Pretty sure it's just two or more gates at that point. 
 			{
 				
 				result.first = gI->ID;
@@ -484,44 +484,111 @@ pair<int, int> objective()
 
 pair<int, int> backtrace(pair<int, int> objec)
 {
+	pair <int, int> result;
 
-	/* if objec is already a PI, return
-	   Else, try to work through one of the gates' inputs that's not already been assigned a value */
-	//if (find(inpNodesList.begin(), inpNodesList.end(), objec.first) != inpNodesList.end())
-	if (!nodeIDMapping[objec.first]->gate_output_of.empty())
+	/* if it is a PI - 
+		If part of the implication stack, return -1
+		If not a part, return the objec
+	
+	If it is not a PI, backtrace one level */
+
+	if (nodeIDMapping[objec.first]->gate_output_of.empty())
 	{
-		//cout << "Entered here\n";
-		cout << ((struct Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->gType << " Gate type\n";
-		/* Loop over the inputs and see if you are able to get a positive  */
-		for (auto inp : ((Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->node_inputs)
+		/* See if it's on the implication stack */
+		bool isImplied = false;
+		for (auto elem : implicationStack)
 		{
-			if (inp->value != VAL_X)
+			if (elem.first == objec.first)
 			{
-				continue;
+				isImplied = true;
+				break;
 			}
-			auto g = (Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
-
-			int invParity = (g->gType + 1) % 2 ; // TODO Honestly the order of the enum just worked out brilliantly like this
-
-			pair<int, int> btRes = backtrace(pair<int, int>(inp->ID, objec.second ^ invParity));
-
-			if (btRes.first != -1)
+		}
+		if (isImplied)
+		{
+			result.first = -1;
+			return result;
+		}
+		else
+		{
+			if (objec.first == stuckAtFault)
 			{
-				return btRes;
+				objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
 			}
+			return objec; //Hasn't been assigned yet
 		}
 	}
 	else
 	{
-		// If the stuck at fault is at a primary input
-		if (objec.first == stuckAtFault)
+		auto g = (struct Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
+		int invParity = (g->gType > 2) && (g->gType <= 4);
+		for (auto elem : g->node_inputs)
 		{
-			objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
+			result = backtrace(pair<int, int>(elem->ID, objec.second ^ invParity));
+			if (result.first != -1)
+			{
+				return result;
+			}
+			else
+			{
+				
+			}
 		}
-		
 	}
 
 	return objec;
+
+
+
+	/* if objec is already a PI, return
+	   Else, try to work through one of the gates' inputs that's not already been assigned a value */
+	//if (find(inpNodesList.begin(), inpNodesList.end(), objec.first) != inpNodesList.end())
+	//if (!nodeIDMapping[objec.first]->gate_output_of.empty())
+	//{
+	//	//cout << "Entered here\n";
+	//	cout << ((struct Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->gType << " Gate type\n";
+	//	/* Loop over the inputs and see if you are able to get a positive  */
+	//	for (auto inp : ((Gate*)nodeIDMapping[objec.first]->gate_output_of[0])->node_inputs)
+	//	{
+	//		
+	//		auto g = (Gate*)nodeIDMapping[objec.first]->gate_output_of[0];
+
+	//		int invParity = (g->gType + 1) % 2 ; // TODO Honestly the order of the enum just worked out brilliantly like this
+
+	//		pair<int, int> btRes = backtrace(pair<int, int>(inp->ID, objec.second ^ invParity));
+
+	//		if (btRes.first != -1)
+	//		{
+	//			/* Shouldn't be an already assigned PI */
+	//			bool isAssignedPI = false;
+	//			for (auto elem : implicationStack)
+	//			{
+	//				if (elem.first == inp->ID)
+	//				{
+	//					isAssignedPI = true;
+	//					break;
+	//				}
+	//			}
+	//			if (isAssignedPI)
+	//			{
+	//				continue;
+	//			}
+	//			cout << "Returning-------------\n";
+	//			return btRes;
+	//		}
+	//	}
+	//}
+	//else
+	//{
+	//	// If the stuck at fault is at a primary input
+	//	if (objec.first == stuckAtFault)
+	//	{
+	//		objec.second = stuckAtValue ? VAL_DBAR : VAL_D;
+	//	}
+	//	
+	//}
+
+	//return objec;
 }
 
 int podem()
@@ -589,6 +656,7 @@ int podem()
 		cout << "Implied value of node " << elem->ID << " was " << elem->value << endl;
 	}
 	cout << "D frontier consists of: " << endl;
+	dFrontierRefresh();
 	for (auto elem : dFrontier)
 	{
 		cout << elem->gType << endl;
@@ -603,10 +671,14 @@ int podem()
 
 	//return 0;
 
-	if (!podem()) // SUCCESS
+	if (nodeIDMapping[objec.first]->value == objec.second || nodeIDMapping[objec.first]->value == 3 - objec.second)
 	{
-		return 0;
+		if (!podem()) // SUCCESS
+		{
+			return 0;
+		}
 	}
+	
 
 	cout << "This imply didn't work, lemme change\n";
 
@@ -616,20 +688,32 @@ int podem()
 
 	imply();
 
+	for (auto elem : nodeList)
+	{
+		cout << "Implied value of node " << elem->ID << " was " << elem->value << endl;
+	}
+	cout << "D frontier consists of: " << endl;
+	dFrontierRefresh();
+	for (auto elem : dFrontier)
+	{
+		cout << elem->gType << endl;
+	}
+
+	if (nodeIDMapping[objec.first]->value == objec.second || nodeIDMapping[objec.first]->value == 3 - objec.second)
+	{
+		if (!podem()) // SUCCESS
+		{
+			return 0;
+		}
+	}
+
+
+	/* Pop from stack and reset the nodes */
+	implicationStack.pop_back();
+	resetNodes(); // Reset nodes based on the implication stack
+
+	return -1;
 	
-
-	if (!podem())
-	{
-		return 0;
-	}
-	else
-	{
-		/* Pop from stack and reset the nodes */
-		implicationStack.pop_back();
-		resetNodes(); // Reset nodes based on the implication stack
-
-		return -1;
-	}
 
 }
 
@@ -768,10 +852,10 @@ int main(int argc, char* argv[])
 
 	resetNodes();
 
-	stuckAtFault = 16; //For now we'll just look at the fault at the start of the fautl list
+	stuckAtFault = 18; //For now we'll just look at the fault at the start of the fautl list
 
 	// Populate the D frontier based on just the stuck at fault as that's the only plac ewe have a faulty input that is a D or a Dbar
-	stuckAtValue = 0;
+	stuckAtValue = 1;
 
 	expectedTargetValue = stuckAtValue ? VAL_DBAR : VAL_D;
 
